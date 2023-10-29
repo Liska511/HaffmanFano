@@ -1,0 +1,602 @@
+#include <iostream>
+#include <string>
+
+using namespace std;
+// Создаем структуру таблиц исходных данных для прохождения цикла алгоритма Шеннона-фано
+struct node {
+
+    string sym; // Исходные символы
+
+    // Массив вероятностей
+    float probability;
+    int lenght[5]; // Максимальная длина кода одного символа
+    int top;
+} p[20];
+
+struct MinHeapNode {  // Дерево Хаффмана
+    char data;  // Ввведенные данные
+    unsigned freq; // Вероятность символа
+    struct MinHeapNode* left, * right; // Левый и правый потомки узла дерева Хаффмана
+};
+
+
+struct MinHeap {  // Группировка узлов дерева Хаффмана
+
+    unsigned size; // Размер группы
+    unsigned capacity; // Вместимость группы 
+    struct MinHeapNode** array;  // Массив указателей на узлы
+};
+
+
+
+
+void shannon(int l, int h, node p[]);   // Протоип функции нахождения кода Шеннона-фано
+void sortByProbability(int n, node p[]); // Прототип функции сортировки введенных вероятности от большей к меньшей 
+void display(int n, node p[]); // Прототип функции вывода полученных данных Шеннона-фано
+void ShennonFano();  // Прототип функции Шеннона-фано
+struct MinHeapNode* newNode(char data, unsigned freq); // Прототип функции нахождения узла
+struct MinHeap* createMinHeap(unsigned capacity);  // Прототип функции создания узла
+void swapMinHeapNode(struct MinHeapNode** a, struct MinHeapNode** b); // Обмен узлов
+void minHeapify(struct MinHeap* minHeap, int idx);  // создание группы
+int isSizeOne(struct MinHeap* minHeap); // Проверка размера узала
+struct MinHeapNode* extractMin(struct MinHeap* minHeap); // нахождения минимального значения
+void insertMinHeap(struct MinHeap* minHeap, struct MinHeapNode* minHeapNode); // Вставка узла в группу
+void buildMinHeap(struct MinHeap* minHeap); // Постройка группу
+void printArr(int arr[], int n); // вывод массива
+int isLeaf(struct MinHeapNode* root); // Проверка на листву
+struct MinHeap* createAndBuildMinHeap(char data[], int freq[], int size);
+struct MinHeapNode* buildHuffmanTree(char data[], int freq[], int size); // Функция Постройки дерева Хаффмана
+void printCodes(struct MinHeapNode* root, int arr[], int top); // вывод кодов Хаффмана
+void HuffmanCodes(char data[], float freq[], int size); // функции обхода дерева Хаффмана и нахождения кодов
+void Haffman(); // функции Хаффмана
+#define MAX_TREE_HT 100 // Максимальная высота дерева Хаффмана
+
+
+
+int main()
+{
+    setlocale(LC_ALL, "Russian");
+    char choice;  // Переменная выбора  
+    cout << "Какой олгоритм сжатия будем применять?\n" <<
+        "1.Алгоритм Шеннона-фано.\n" <<
+        "2.Алгоритм Хаффмана.\n" << endl;
+    cin >> choice;
+    switch (choice) {
+    case '1':
+        ShennonFano();
+        break;
+
+    case '2':
+        Haffman();
+        break;
+    }
+    return 0;
+}
+
+
+
+void Haffman()
+{
+    char choice;
+    int size = 0; // размер
+
+    cout << "Как установим вероятности?\n" <<
+        "1.Через прямой ввод\n" <<
+        "2.Через ввод строки символов" <<
+        endl;
+    cin >> choice;
+    switch (choice) {
+    case '1': {
+        // Ввод исходного количества символов   
+        cout << "Введите исходное количество уникальных символов: ";
+        cin >> size;
+        cout << endl;
+        float* freq;
+        char* arr;
+        arr = new char[size]; // Массив символов
+        freq = new float[size]; // Массив вероятностей
+
+        // Ввод символов
+        for (int i = 0; i < size; i++) {
+            cout << "Введите " << i + 1 << " символ: " << endl;
+            cin >> arr[i];
+            cout << "Введите вероятность символа " << arr[i] << ": ";
+            cin >> freq[i];
+            cout << endl;
+        }
+        HuffmanCodes(arr, freq, size);
+        break;
+
+    }
+    case '2': {
+        bool IsBuffered = false;
+
+        int count = 0;
+        string ch;
+        cout << "Введите исходную строку символов" << endl;
+        cin >> ch;
+        char* buffer;
+        buffer = new char[ch.length()];
+        float* bufferFreq;
+        bufferFreq = new float[ch.length()];
+        cout << "Всего введено " << ch.length() << " символов" << endl;
+
+        for (int i = 0; i < ch.length(); i++) {
+            IsBuffered = false;
+            for (int k = 0; k < ch.length(); k++) {
+                if (ch[i] == buffer[k] and IsBuffered == false) {
+                    IsBuffered = true;
+                    break;
+                }
+            }
+            if (IsBuffered == false) {
+                size++;
+                for (int j = 0; j < ch.length(); j++) {
+                    if (ch[i] == ch[j]) {
+                        count++;
+                    }
+                }
+                buffer[size - 1] = ch[i];
+                bufferFreq[size - 1] = (1.0 / ch.length()) * count;
+                cout << "Из них символов " << buffer[size - 1] << ": " << count << "." << endl;
+                cout << "Вероятность символа " << buffer[size - 1] << ": " << bufferFreq[size - 1] << endl;
+                count = 0;
+            }
+
+
+
+        }
+        cout << endl;
+        cout << "Всего найдено уникальных символов: " << size << endl;
+        float* freq;
+        char* arr;
+        arr = new char[size]; // Массив символов
+        freq = new float[size]; // Массив вероятностей
+        for (int i = 0; i < size; i++) {
+            arr[i] = buffer[i];
+            freq[i] = bufferFreq[i];
+        }
+        cout << endl;
+        cout << "Итоговых вероятности:" << endl;
+        HuffmanCodes(arr, freq, size);
+
+
+    }
+
+
+
+
+
+    }
+
+    // char arr[] = { 'a', 'b', 'c', 'd', 'e', 'f' }; 
+     // int freq[] = { 5, 9, 12, 13, 16, 45 }; 
+
+}
+
+
+
+struct MinHeap* createMinHeap(unsigned capacity) // Функция создания узла
+{
+
+    struct MinHeap* minHeap = (struct MinHeap*)malloc(sizeof(struct MinHeap));
+
+    // current size is 0 
+    minHeap->size = 0;
+
+    minHeap->capacity = capacity;
+
+    minHeap->array = (struct MinHeapNode**)malloc(
+        minHeap->capacity * sizeof(struct MinHeapNode*));
+    return minHeap;
+}
+
+
+
+struct MinHeapNode* newNode(char data, unsigned freq) // Функция нахождения узла
+{
+    struct MinHeapNode* temp = (struct MinHeapNode*)malloc(
+        sizeof(struct MinHeapNode));
+
+    temp->left = temp->right = NULL;
+    temp->data = data;
+    temp->freq = freq;
+
+    return temp;
+}
+
+
+void swapMinHeapNode(struct MinHeapNode** a, struct MinHeapNode** b) // Обмен узлов
+
+{
+
+    struct MinHeapNode* t = *a;
+    *a = *b;
+    *b = t;
+}
+
+
+void minHeapify(struct MinHeap* minHeap, int idx)  // создание группы
+
+{
+
+    int smallest = idx;
+    int left = 2 * idx + 1;
+    int right = 2 * idx + 2;
+
+    if (left < minHeap->size
+        && minHeap->array[left]->freq
+        < minHeap->array[smallest]->freq)
+        smallest = left;
+
+    if (right < minHeap->size
+        && minHeap->array[right]->freq
+        < minHeap->array[smallest]->freq)
+        smallest = right;
+
+    if (smallest != idx) {
+        swapMinHeapNode(&minHeap->array[smallest],
+            &minHeap->array[idx]);
+        minHeapify(minHeap, smallest);
+    }
+}
+
+
+int isSizeOne(struct MinHeap* minHeap) // Проверка размера узала
+{
+
+    return (minHeap->size == 1);
+}
+
+
+struct MinHeapNode* extractMin(struct MinHeap* minHeap) // нахождения минимального значения
+
+{
+
+    struct MinHeapNode* temp = minHeap->array[0];
+    minHeap->array[0] = minHeap->array[minHeap->size - 1];
+
+    --minHeap->size;
+    minHeapify(minHeap, 0);
+
+    return temp;
+}
+
+
+void insertMinHeap(struct MinHeap* minHeap, struct MinHeapNode* minHeapNode) // Вставка узла в группу
+
+{
+
+    ++minHeap->size;
+    int i = minHeap->size - 1;
+
+    while (i
+        && minHeapNode->freq
+        < minHeap->array[(i - 1) / 2]->freq) {
+
+        minHeap->array[i] = minHeap->array[(i - 1) / 2];
+        i = (i - 1) / 2;
+    }
+
+    minHeap->array[i] = minHeapNode;
+}
+
+
+void buildMinHeap(struct MinHeap* minHeap) // Постройка группу
+
+{
+
+    int n = minHeap->size - 1;
+    int i;
+
+    for (i = (n - 1) / 2; i >= 0; --i)
+        minHeapify(minHeap, i);
+}
+
+
+void printArr(int arr[], int n) // вывод массива
+{
+    int i;
+    for (i = 0; i < n; ++i)
+        cout << arr[i];
+
+    cout << "\n";
+}
+
+
+int isLeaf(struct MinHeapNode* root) // Проверка на листву
+
+{
+
+    return !(root->left) && !(root->right);
+}
+
+struct MinHeap* createAndBuildMinHeap(char data[], float freq[], int size)
+
+{
+
+    struct MinHeap* minHeap = createMinHeap(size);
+
+    for (int i = 0; i < size; ++i)
+        minHeap->array[i] = newNode(data[i], freq[i]);
+
+    minHeap->size = size;
+    buildMinHeap(minHeap);
+
+    return minHeap;
+}
+
+
+struct MinHeapNode* buildHuffmanTree(char data[], float freq[], int size) // Функция Постройки дерева Хаффмана
+
+{
+    struct MinHeapNode* left, * right, * top;
+
+
+    struct MinHeap* minHeap = createAndBuildMinHeap(data, freq, size);
+
+    while (!isSizeOne(minHeap)) {
+
+        left = extractMin(minHeap);
+        right = extractMin(minHeap);
+
+
+        top = newNode('$', left->freq + right->freq);
+
+        top->left = left;
+        top->right = right;
+
+        insertMinHeap(minHeap, top);
+    }
+
+    return extractMin(minHeap);
+}
+
+
+void printCodes(struct MinHeapNode* root, int arr[], int top) // вывод кодов Хаффмана
+
+{
+
+    if (root->left) {
+
+        arr[top] = 0;
+        printCodes(root->left, arr, top + 1);
+    }
+
+    if (root->right) {
+
+        arr[top] = 1;
+        printCodes(root->right, arr, top + 1);
+    }
+
+
+    if (isLeaf(root)) {
+
+        cout << root->data << ": ";
+        printArr(arr, top);
+    }
+}
+
+
+void HuffmanCodes(char data[], float freq[], int size) // функции обхода дерева Хаффмана и нахождения кодов
+
+{
+
+    struct MinHeapNode* root = buildHuffmanTree(data, freq, size);
+
+    int arr[MAX_TREE_HT], top = 0;
+
+    printCodes(root, arr, top);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+void ShennonFano()
+{
+
+    int n, i, j;  // n - Число символов, i,j - Счетчики циклов
+    char choice;  // Переменная выбора    
+    float total = 0; // Общая вероятность
+    string ch;  // Веденная строка/символ
+    node temp;
+
+    cout << "Как установим вероятности?\n" <<
+        "1.Через прямой ввод\n" <<
+        "2.Через ввод строки символов" <<
+        endl;
+    cin >> choice;
+    switch (choice) {
+    case '1':
+        // Ввод исходного количества символов   
+        cout << "Введите исходное количество символов: ";
+        cin >> n;
+        cout << endl;
+
+        // Ввод символов
+        for (i = 0; i < n; i++) {
+            cout << "Введите " << i + 1 << " символ: ";
+            cin >> ch;
+
+            // Вставка символа в таблицу
+            p[i].sym += ch;
+        }
+
+        // Ввод вероятностей символов
+        float* x;
+        x = new float[n];
+
+        for (i = 0; i < n; i++) {
+            cout << "Введите вероятность символа " << p[i].sym << ": ";
+            cin >> x[i];
+
+            // Вставка вероятности в таблицу
+            p[i].probability = x[i];
+            total = total + p[i].probability;
+
+            // Проверка на превшение 100% вероятности
+            if (total > 1.0) {
+                cout << "Ошибка. Введите вероятность поменьше" << endl;
+                total = total - p[i].probability;
+                i--;
+            }
+        }
+        delete[]x;
+        p[i].probability = 1 - total;
+
+        sortByProbability(n, p);  // Вызов функции сортировки
+
+        for (i = 0; i < n; i++)
+            p[i].top = -1;
+
+        shannon(0, n - 1, p); // Вызов функции алгоритма Шеннона-Фано
+
+
+        display(n, p);  // Вывод итоговых значений
+        break;
+
+    case '2':
+        int count = 0;
+        bool IsBuffered;
+        string SymMem;
+        int n = 0;
+        cout << "Введите исходную строку:" << endl;
+        cin >> ch;
+        cout << "Всего введено " << ch.length() << " символов" << endl;
+        SymMem.resize(ch.length(), ' ');
+        for (int i = 0; i < ch.length(); i++) {
+            IsBuffered = false;
+            for (int k = 0; k < ch.length(); k++) {
+                if (ch[i] == SymMem[k] and IsBuffered == false) {
+                    IsBuffered = true;
+                    break;
+                }
+            }
+            if (IsBuffered == false) {
+                n++;
+                for (int j = 0; j < ch.length(); j++) {
+                    if (ch[i] == ch[j]) {
+                        count++;
+                    }
+                }
+                p[n - 1].sym = ch[i];
+                cout << i << endl;
+                cout << "Из них символов " << p[n - 1].sym << ": " << count << "." << endl;
+                p[n - 1].probability = (1.0 / ch.length()) * count;
+                cout << "Вероятность символа " << p[n - 1].sym << ": " << p[n - 1].probability << "." << endl;
+                SymMem[i] = ch[i];
+                count = 0;
+            }
+
+        }
+        cout << endl;
+        cout << "Всего найдено уникальных символов: " << n << endl;
+        for (i = 0; i < n; i++) {
+        }
+        sortByProbability(n, p);  // Вызов функции сортировки
+        for (i = 0; i < n; i++)
+            p[i].top = -1;
+
+        shannon(0, n - 1, p); // Вызов функции алгоритма Шеннона-Фано
+        display(n, p);  // Вывод итоговых значений
+
+        break;
+    }
+
+}
+
+
+void shannon(int l, int h, node p[]) // Функция алгритма Шеннона-Фано
+{
+    float pack1 = 0, pack2 = 0, diff1 = 0, diff2 = 0;
+    int i, d, k, j;
+    if ((l + 1) == h || l == h || l > h) {
+        if (l == h || l > h)
+            return;
+        p[h].lenght[++(p[h].top)] = 0;
+        p[l].lenght[++(p[l].top)] = 1;
+        return;
+    }
+    else {
+        for (i = l; i <= h - 1; i++)
+            pack1 = pack1 + p[i].probability;
+        pack2 = pack2 + p[h].probability;
+        diff1 = pack1 - pack2;
+        if (diff1 < 0)
+            diff1 = diff1 * -1;
+        j = 2;
+        while (j != h - l + 1) {
+            k = h - j;
+            pack1 = pack2 = 0;
+            for (i = l; i <= k; i++)
+                pack1 = pack1 + p[i].probability;
+            for (i = h; i > k; i--)
+                pack2 = pack2 + p[i].probability;
+            diff2 = pack1 - pack2;
+            if (diff2 < 0)
+                diff2 = diff2 * -1;
+            if (diff2 >= diff1)
+                break;
+            diff1 = diff2;
+            j++;
+        }
+        k++;
+        for (i = l; i <= k; i++)
+            p[i].lenght[++(p[i].top)] = 1;
+        for (i = k + 1; i <= h; i++)
+            p[i].lenght[++(p[i].top)] = 0;
+
+        //Рекурсия Шеннона-Фано
+        shannon(l, k, p);
+        shannon(k + 1, h, p);
+    }
+}
+
+
+void sortByProbability(int n, node p[])  // Функция сортировки вероятностей от большей к меньшей
+{
+    int i, j;
+    node temp;
+    for (j = 1; j <= n - 1; j++) {
+        for (i = 0; i < n - 1; i++) {
+            if ((p[i].probability) > (p[i + 1].probability)) {
+                temp.probability = p[i].probability;
+                temp.sym = p[i].sym;
+
+                p[i].probability = p[i + 1].probability;
+                p[i].sym = p[i + 1].sym;
+
+                p[i + 1].probability = temp.probability;
+                p[i + 1].sym = temp.sym;
+            }
+        }
+    }
+}
+
+void display(int n, node p[]) // Функция вывода итоговых кодов
+{
+    int i, j;
+    cout << "\n\n\n\tСимвол\tВероятность\tКод" << endl;
+    for (i = n - 1; i >= 0; i--) {
+        cout << "\n\t" << p[i].sym << "\t\t" << p[i].probability << "\t";
+        for (j = 0; j <= p[i].top; j++)
+            cout << p[i].lenght[j];
+    }
+}
+
+
